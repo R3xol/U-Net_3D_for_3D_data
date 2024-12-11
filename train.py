@@ -39,17 +39,26 @@ testDS = SegmentationDataset(imagePaths=testImages, data_Directory=data_director
 print(f"[INFO] found {len(trainDS)} examples in the training set...")
 print(f"[INFO] found {len(testDS)} examples in the test set...")
 
+# Number of threads
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+if device == "cuda":
+    nr_workers = torch.cuda.device_count() * 4
+else:
+    nr_workers = 0
+
+
 # Utworzenie DataLoaderów
 trainLoader = DataLoader(trainDS, shuffle=True,
                              batch_size=config.BATCH_SIZE,
                              pin_memory=config.PIN_MEMORY,
-                             num_workers=0)
+                             num_workers=nr_workers)
 testLoader = DataLoader(testDS, shuffle=False,
                             batch_size=config.BATCH_SIZE,
                             pin_memory=config.PIN_MEMORY,
-                            num_workers=0)
+                            num_workers=nr_workers)
     
-# Przeniesienie modelu na odpowiednie urządzenie
+
 model = model.to(config.DEVICE)
     
 # Inicjalizacja funkcji straty i optymalizatora
@@ -77,7 +86,9 @@ for epoch in range(config.NUM_EPOCHS):
     # Trenowanie modelu
     print(f"[INFO] Epoka {epoch + 1}/{config.NUM_EPOCHS}")
     
-    for (x, y) in tqdm(trainLoader):           
+    for (x, y) in tqdm(trainLoader):
+        # send the input to the device
+        (x, y) = (x.to(config.DEVICE), y.to(config.DEVICE))           
         # Obliczanie prognoz i straty
         pred = model(x)
         loss = lossFunc(pred, y)
@@ -93,6 +104,7 @@ for epoch in range(config.NUM_EPOCHS):
     model.eval()
     with torch.no_grad():
         for (x, y) in testLoader:
+            (x, y) = (x.to(config.DEVICE), y.to(config.DEVICE))
             pred = model(x)
             loss = lossFunc(pred, y)
             totalTestLoss += loss.item()
