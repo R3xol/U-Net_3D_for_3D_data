@@ -3,8 +3,9 @@ import torch
 import os
 
 # base path of the dataset
-DATASET_PATH = os.path.join("dataset", "train")
-DATASET_PATH_TEST = os.path.join("dataset", "test")
+DATASET_PATH_TRAIN = './dataset/train'
+DATASET_PATH_TEST = './dataset/test'
+DATASET_PATH_PREDICT = './dataset/predict'
 
 # determine the device to be used for training and evaluation
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -32,6 +33,9 @@ BASE_OUTPUT = "./output"
 MODEL_PATH = os.path.sep.join([BASE_OUTPUT, "unet3d.pth"])
 PLOT_PATH = os.path.sep.join([BASE_OUTPUT, "training_plot.png"])
 TEST_PATHS = os.path.sep.join([BASE_OUTPUT, "test_paths.txt"])
+
+# lokalizacja do zapisu przewidywań
+PREDICT_PATHS = "./output/predict"
 
 BATCH_SIZE = 4  # Rozmiar batcha
 INIT_LR = 1e-3  # Początkowa wartość learning rate

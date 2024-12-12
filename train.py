@@ -17,24 +17,26 @@ import torch
 import time
 import os
 
-# Path to the directory
+'''# Path to the directory
 data_directory_test = './dataset/test'
-data_directory = './dataset/train'
+data_directory = './dataset/train'''
 
-testImages = []
+
 '''index, trainImages = enumerate(sorted(os.listdir(data_directory)))
 index_test, testImages = enumerate(sorted(os.listdir(data_directory_test)))'''
 
-file_names = os.listdir(data_directory)
+testImages = []
 
-trainImages = [f for f in file_names if os.path.isfile(os.path.join(data_directory, f))]
+file_names = os.listdir(config.DATASET_PATH_TRAIN)
 
-file_names = os.listdir(data_directory_test)
-testImages = [f for f in file_names if os.path.isfile(os.path.join(data_directory_test, f))]
+trainImages = [f for f in file_names if os.path.isfile(os.path.join(config.DATASET_PATH_TRAIN, f))]
+
+file_names = os.listdir(config.DATASET_PATH_TEST)
+testImages = [f for f in file_names if os.path.isfile(os.path.join(config.DATASET_PATH_TEST, f))]
 
 # create the train and test datasets
-trainDS = SegmentationDataset(imagePaths=trainImages, data_Directory=data_directory)
-testDS = SegmentationDataset(imagePaths=testImages, data_Directory=data_directory_test)
+trainDS = SegmentationDataset(imagePaths=trainImages, data_Directory=config.DATASET_PATH_TRAIN)
+testDS = SegmentationDataset(imagePaths=testImages, data_Directory=config.DATASET_PATH_TEST)
 
 print(f"[INFO] found {len(trainDS)} examples in the training set...")
 print(f"[INFO] found {len(testDS)} examples in the test set...")

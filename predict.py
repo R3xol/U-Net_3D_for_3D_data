@@ -7,51 +7,69 @@ import numpy as np
 import torch
 import h5py
 import os
+from pyimagesearch.model import UNet3D
+
+# odczyt z hdf5
+def read_HDF5(file_name):
+    with h5py.File(file_name, 'r') as f:
+        cell_matrix = f['Cell'][:]
+        OCT_matrix = f['OCT'][:]
+    return cell_matrix, OCT_matrix
 
 # Zapis do jednego pliku HDF5
-def save_to_H5_file(file_name, rescaled_matrix_cell, real_part_inverse_fourier_transform):
-    with h5py.File(file_name, 'w') as f:
-        f.create_dataset('Cell', data = rescaled_matrix_cell) 
-        f.create_dataset('OCT', data = real_part_inverse_fourier_transform)
+def save_to_H5_file(file_name, cell, predict):
+	# Zamiana końcówki
+	new_filename = file_name.replace("_converted.h5", "_predict.h5",)
+	path_save = os.path.sep.join([config.PREDICT_PATHS, new_filename])
+	with h5py.File(path_save, 'w') as f:
+		f.create_dataset('Cell_base', data = cell) 
+		f.create_dataset('Cell_predict', data = predict)
+	print("[INFO] save down predict...")
 	
-def make_predictions(model, imagePath):
+def make_predictions(model, oct):
 	# set model to evaluation mode
 	model.eval()
-
-	imagePath = os.path.join(self.data_Directory, file_name)
-
-	# load the image from disk
-	with h5py.File(imagePath, 'r') as f:
-		cell = f['Cell'][:]
-		oct = f['OCT'][:]
-
-	cell = np.float32(cell)
-
-	cell = torch.from_numpy(cell)#.to(config.DEVICE)
 	oct = torch.from_numpy(oct)#.to(config.DEVICE)
-
-	cell = cell.unsqueeze(0)  # Dodaj wymiar kanału: (1, D, H, W)
-	oct = oct.unsqueeze(0)
+	oct = oct.unsqueeze(0)# Dodaj wymiar kanału: (1, D, H, W)
+	oct = oct.unsqueeze(0)# Dodaj wymiar kanału: (1, 1, D, H, W)
 
 	# make the prediction, pass the results through the relu
 	# function, and convert the result to a NumPy array
-	predImg = model(oct).squeeze()
+	'''predImg = model(oct).squeeze()
 	predImg = torch.relu(predImg)
-	predImg = predImg.cpu().numpy()
+	predImg = predImg.cpu().numpy()'''
 
-	save_to_H5_file(predImg)	
+	# Wykonaj predykcję
+	with torch.no_grad():  # Wyłączenie obliczania gradientu dla predykcji
+		predImg = model(oct).squeeze()  # Przekształć wyjście, usuń dodatkowe wymiary
+		#predImg = torch.relu(predImg)  # Zastosuj funkcję aktywacji ReLU
+    
+    # Przenieś tensor na CPU (jeśli jest na GPU) i konwertuj na numpy
+	predImg_numpy = predImg.numpy()  # Zamiana na numpy
+	return predImg_numpy
 
-# load the image paths in our testing file and randomly select 10
-# image paths
-print("[INFO] loading up test image paths...")
-imagePaths = open(config.TEST_PATHS).read().strip().split("\n")
-imagePaths = np.random.choice(imagePaths, size=10)
+
+'''file_names = os.listdir(config.DATASET_PATH_TRAIN)
+trainImages = [f for f in file_names if os.path.isfile(os.path.join(config.DATASET_PATH_TRAIN, f))]'''
 
 # load our model from disk and flash it to the current device
 print("[INFO] load up model...")
-unet = torch.load(config.MODEL_PATH).to(config.DEVICE)
+#unet = torch.load(config.MODEL_PATH)#.to(config.DEVICE)
 
-# iterate over the randomly selected test image paths
-for path in imagePaths:
-	# make predictions and visualize the results
-	make_predictions(unet, path)
+unet = UNet3D()  # Stwórz instancję swojego modelu
+unet.load_state_dict(torch.load(config.MODEL_PATH))  # Wczytaj state_dict
+# unet = unet.to(config.DEVICE)  # Jeśli używasz GPU, odkomentuj to
+
+for i, file_name in enumerate(sorted(os.listdir(config.DATASET_PATH_PREDICT))):
+	if file_name.endswith('.h5'):
+		print(i, file_name)
+
+		image_path = os.path.join(config.DATASET_PATH_PREDICT, file_name)
+
+		cell_matrix, OCT_matrix = read_HDF5(image_path)
+
+		predict_matrix = make_predictions(unet, OCT_matrix)
+
+		cell_matrix = np.float32(cell_matrix)
+
+		save_to_H5_file(file_name, cell_matrix, predict_matrix)
