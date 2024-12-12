@@ -5,62 +5,41 @@ from pyimagesearch import config
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import cv2
+import h5py
 import os
-def prepare_plot(origImage, origMask, predMask):
-	# initialize our figure
-	figure, ax = plt.subplots(nrows=1, ncols=3, figsize=(10, 10))
-	# plot the original image, its mask, and the predicted mask
-	ax[0].imshow(origImage)
-	ax[1].imshow(origMask)
-	ax[2].imshow(predMask)
-	# set the titles of the subplots
-	ax[0].set_title("Image")
-	ax[1].set_title("Original Mask")
-	ax[2].set_title("Predicted Mask")
-	# set the layout of the figure and display it
-	figure.tight_layout()
-	figure.show()
+
+# Zapis do jednego pliku HDF5
+def save_to_H5_file(file_name, rescaled_matrix_cell, real_part_inverse_fourier_transform):
+    with h5py.File(file_name, 'w') as f:
+        f.create_dataset('Cell', data = rescaled_matrix_cell) 
+        f.create_dataset('OCT', data = real_part_inverse_fourier_transform)
 	
 def make_predictions(model, imagePath):
 	# set model to evaluation mode
 	model.eval()
-	# turn off gradient tracking
-	with torch.no_grad():
-		# load the image from disk, swap its color channels, cast it
-		# to float data type, and scale its pixel values
-		image = cv2.imread(imagePath)
-		image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-		image = image.astype("float32") / 255.0
-		# resize the image and make a copy of it for visualization
-		image = cv2.resize(image, (128, 128))
-		orig = image.copy()
-		# find the filename and generate the path to ground truth
-		# mask
-		filename = imagePath.split(os.path.sep)[-1]
-		groundTruthPath = os.path.join(config.MASK_DATASET_PATH,
-			filename)
-		# load the ground-truth segmentation mask in grayscale mode
-		# and resize it
-		gtMask = cv2.imread(groundTruthPath, 0)
-		gtMask = cv2.resize(gtMask, (config.INPUT_IMAGE_HEIGHT,
-			config.INPUT_IMAGE_HEIGHT))
-		# make the channel axis to be the leading one, add a batch
-		# dimension, create a PyTorch tensor, and flash it to the
-		# current device
-		image = np.transpose(image, (2, 0, 1))
-		image = np.expand_dims(image, 0)
-		image = torch.from_numpy(image).to(config.DEVICE)
-		# make the prediction, pass the results through the sigmoid
-		# function, and convert the result to a NumPy array
-		predMask = model(image).squeeze()
-		predMask = torch.sigmoid(predMask)
-		predMask = predMask.cpu().numpy()
-		# filter out the weak predictions and convert them to integers
-		predMask = (predMask > config.THRESHOLD) * 255
-		predMask = predMask.astype(np.uint8)
-		# prepare a plot for visualization
-		prepare_plot(orig, gtMask, predMask)
+
+	imagePath = os.path.join(self.data_Directory, file_name)
+
+	# load the image from disk
+	with h5py.File(imagePath, 'r') as f:
+		cell = f['Cell'][:]
+		oct = f['OCT'][:]
+
+	cell = np.float32(cell)
+
+	cell = torch.from_numpy(cell)#.to(config.DEVICE)
+	oct = torch.from_numpy(oct)#.to(config.DEVICE)
+
+	cell = cell.unsqueeze(0)  # Dodaj wymiar kanału: (1, D, H, W)
+	oct = oct.unsqueeze(0)
+
+	# make the prediction, pass the results through the relu
+	# function, and convert the result to a NumPy array
+	predImg = model(oct).squeeze()
+	predImg = torch.relu(predImg)
+	predImg = predImg.cpu().numpy()
+
+	save_to_H5_file(predImg)	
 
 # load the image paths in our testing file and randomly select 10
 # image paths
