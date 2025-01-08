@@ -37,4 +37,4 @@ class SegmentationDataset(Dataset):
 		oct = oct.unsqueeze(0)
 
 		# return a tuple of the image and its mask
-		return (cell, oct)
+		return (oct, cell)

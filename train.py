@@ -5,7 +5,7 @@ from pyimagesearch.dataset import SegmentationDataset
 from pyimagesearch.model import UNet3D
 model = UNet3D()
 from pyimagesearch import config
-from torch.nn import BCEWithLogitsLoss
+from torch.nn import MSELoss #BCEWithLogitsLoss
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
@@ -16,11 +16,18 @@ import matplotlib.pyplot as plt
 import torch
 import time
 import os
+import numpy as np
+
+from torchmetrics import StructuralSimilarityIndexMeasure, PeakSignalNoiseRatio, MeanSquaredError
+
+# Metryki SSIM i PSNR
+ssim_metric = StructuralSimilarityIndexMeasure()#.to(config.DEVICE)
+psnr_metric = PeakSignalNoiseRatio()#.to(config.DEVICE)
+mean_squared_error = MeanSquaredError()
 
 '''# Path to the directory
 data_directory_test = './dataset/test'
 data_directory = './dataset/train'''
-
 
 '''index, trainImages = enumerate(sorted(os.listdir(data_directory)))
 index_test, testImages = enumerate(sorted(os.listdir(data_directory_test)))'''
@@ -64,7 +71,7 @@ testLoader = DataLoader(testDS, shuffle=False,
 model = model.to(config.DEVICE)
     
 # Inicjalizacja funkcji straty i optymalizatora
-lossFunc = BCEWithLogitsLoss()
+lossFunc = MSELoss() #BCEWithLogitsLoss()
 opt = Adam(model.parameters(), lr=config.INIT_LR)
     
 # Obliczenie liczby kroków na epokę
@@ -74,16 +81,32 @@ testSteps = len(testLoader)
 print(trainSteps)
 print(testSteps)
 
-# Inicjalizacja słownika historii strat
-H = {"train_loss": [], "test_loss": []}
+# Inicjalizacja słownika
+H = {"train_loss": [], "test_loss": [], "ssim": [], "psnr": []}
+Test_loss = []
+Train_loss = []
+SSIM = []
+PSNR = []
+MSE = []
     
 print("[INFO] Rozpoczynam trenowanie modelu...")
 startTime = time.time()
+
+# Inicjalizacja EarlyStopping
+early_stopping_patience = 10  # Liczba epok bez poprawy, po których zatrzymamy trening
+early_stopping_counter = 0
+best_test_loss = float("inf")
+
+# Learning Rate Scheduler
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', patience=5, factor=0.5, verbose=True)
     
 for epoch in range(config.NUM_EPOCHS):
     model.train()
     totalTrainLoss = 0
     totalTestLoss = 0
+    totalSSIM = 0
+    totalPSNR = 0
+    totalMSE = 0
         
     # Trenowanie modelu
     print(f"[INFO] Epoka {epoch + 1}/{config.NUM_EPOCHS}")
@@ -110,17 +133,55 @@ for epoch in range(config.NUM_EPOCHS):
             pred = model(x)
             loss = lossFunc(pred, y)
             totalTestLoss += loss.item()
+
+            # Obliczanie metryk SSIM i PSNR
+            totalSSIM += ssim_metric(pred, y)
+            totalPSNR += psnr_metric(pred, y)
+            totalMSE += mean_squared_error(pred, y)
         
     # Obliczenie średnich strat dla epoki
     avgTrainLoss = totalTrainLoss / trainSteps
     avgTestLoss = totalTestLoss / testSteps
+    avgSSIM = totalSSIM / testSteps
+    avgPSNR = totalPSNR / testSteps
+    avgMSE = totalMSE / testSteps
         
     H["train_loss"].append(avgTrainLoss)
     H["test_loss"].append(avgTestLoss)
-        
+    H["ssim"].append(avgSSIM.item())
+    H["psnr"].append(avgPSNR.item())
+
+    Train_loss.append(avgTrainLoss)
+    Test_loss.append(avgTestLoss)
+    SSIM.append(avgSSIM)
+    PSNR.append(avgPSNR)
+    MSE.append(avgMSE)
+     
     # Informacje o postępie
     print(f"[INFO] EPOKA: {epoch + 1}/{config.NUM_EPOCHS}")
     print(f"Train Loss: {avgTrainLoss:.6f}, Test Loss: {avgTestLoss:.6f}")
+    print(f"SSIM: {avgSSIM:.6f}, PSNR: {avgPSNR:.6f}, MSE: {avgMSE:.6f}")
+
+    # Learning Rate Scheduling
+    scheduler.step(avgTestLoss)
+
+    # Early Stopping: Sprawdzenie, czy strata na danych testowych się poprawiła
+    if avgTestLoss < best_test_loss:
+        best_test_loss = avgTestLoss
+        early_stopping_counter = 0  # Resetujemy licznik, bo mamy poprawę
+
+        # Zapisanie modelu
+        # print("[INFO] Zapisuję model do pliku...")
+        torch.save(model.state_dict(), config.MODEL_IN_PROGRESS_PATH)
+
+        print(f"[INFO] Najlepszy wynik test loss: {best_test_loss:.6f}")
+    else:
+        early_stopping_counter += 1
+        print(f"[INFO] Brak poprawy test loss przez {early_stopping_counter} epok.")
+        
+        if early_stopping_counter >= early_stopping_patience:
+            print(f"[INFO] Early stopping aktywowany. Zatrzymujemy trening.")
+            break
     
 # Koniec trenowania
 endTime = time.time()
@@ -140,3 +201,23 @@ plt.xlabel("Epoka")
 plt.ylabel("Strata")
 plt.legend(loc="upper right")
 plt.savefig(config.PLOT_PATH)
+
+# Zapis danych procesu uczenia
+PSNR = np.array(PSNR)
+SSIM = np.array(SSIM)
+MSE = np.array(MSE)
+Test_loss = np.array(Test_loss)
+Train_loss = np.array(Train_loss)
+
+combined_matrix = np.array([
+    ["MSE"] + MSE.tolist(),
+    ["PSNR"] + PSNR.tolist(),
+    ["SSIM"] + SSIM.tolist(),
+    ["Test_loss"] + Test_loss.tolist(),
+    ["Train_loss"] + Train_loss.tolist()
+], dtype=object)
+
+# Zapisanie macierzy jako CSV
+np.savetxt(config.LERNING_RATE_PATHS, combined_matrix, fmt='%s', delimiter=',')
+
+print(f"Macierz została zapisana do pliku: {config.LERNING_RATE_PATHS}")

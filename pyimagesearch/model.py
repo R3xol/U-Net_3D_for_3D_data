@@ -1,9 +1,9 @@
-from torch.nn import ConvTranspose3d, Conv3d, MaxPool3d, Module, ModuleList, ReLU
+from torch.nn import ConvTranspose3d, Conv3d, MaxPool3d, Module, ModuleList, ReLU, BatchNorm3d, Tanh
 from torchvision.transforms import CenterCrop
 import torch.nn.functional as F
 import torch
 
-class Block3D(Module):
+'''class Block3D(Module):
     def __init__(self, inChannels, outChannels):
         super().__init__()
         # store the 3D convolution and ReLU layers
@@ -13,8 +13,22 @@ class Block3D(Module):
 
     def forward(self, x):
         # apply CONV => RELU => CONV block
-        return self.conv2(self.relu(self.conv1(x)))
+        return self.conv2(self.relu(self.conv1(x)))'''
 
+class Block3D(Module):
+    def __init__(self, inChannels, outChannels):
+        super().__init__()
+        # store the 3D convolution, BatchNorm, and THAN layers
+        self.conv1 = Conv3d(inChannels, outChannels, kernel_size=3, padding=1)
+        self.bn1 = BatchNorm3d(outChannels)
+        self.than = Tanh()
+        self.conv2 = Conv3d(outChannels, outChannels, kernel_size=3, padding=1)
+        self.bn2 = BatchNorm3d(outChannels)
+
+    def forward(self, x):
+        # apply CONV => BatchNorm => THAN => CONV => BatchNorm block
+        x = self.bn2(self.conv2(self.than(self.bn1(self.conv1(x)))))
+        return x
 
 class Encoder3D(Module):
     def __init__(self, channels=(1, 16, 32, 64)):

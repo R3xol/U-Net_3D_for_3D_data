@@ -33,13 +33,15 @@ BASE_OUTPUT = "./output"
 MODEL_PATH = os.path.sep.join([BASE_OUTPUT, "unet3d.pth"])
 PLOT_PATH = os.path.sep.join([BASE_OUTPUT, "training_plot.png"])
 TEST_PATHS = os.path.sep.join([BASE_OUTPUT, "test_paths.txt"])
+LERNING_RATE_PATHS = os.path.sep.join([BASE_OUTPUT, "combined_matrix.csv"])
+MODEL_IN_PROGRESS_PATH = os.path.sep.join([BASE_OUTPUT, "unet3d_BEST.pth"])
 
 # lokalizacja do zapisu przewidywań
 PREDICT_PATHS = "./output/predict"
 
-BATCH_SIZE = 4  # Rozmiar batcha
+BATCH_SIZE = 1  # Rozmiar batcha
 INIT_LR = 1e-3  # Początkowa wartość learning rate
-NUM_EPOCHS = 10  # Liczba epok
+NUM_EPOCHS = 100  # Liczba epok
 
 PIN_MEMORY = True  # Wspomaganie pamięci dla GPU
 
