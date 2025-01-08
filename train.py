@@ -18,12 +18,20 @@ import time
 import os
 import numpy as np
 
+import signal
+import sys
+
 from torchmetrics import StructuralSimilarityIndexMeasure, PeakSignalNoiseRatio, MeanSquaredError
 
 # Metryki SSIM i PSNR
 ssim_metric = StructuralSimilarityIndexMeasure()#.to(config.DEVICE)
 psnr_metric = PeakSignalNoiseRatio()#.to(config.DEVICE)
 mean_squared_error = MeanSquaredError()
+
+# Funkcja, która pozwala na przerwanie pętli z zewnątrz (np. przez Ctrl+C)
+def handle_interrupt(signal, frame):
+    print("\n[INFO] Trening przerwany przez użytkownika.")
+    raise KeyboardInterrupt  # Podnosi wyjątek, aby przerwać pętlę, ale kontynuować kod za pętlą
 
 '''# Path to the directory
 data_directory_test = './dataset/test'
@@ -99,90 +107,98 @@ best_test_loss = float("inf")
 
 # Learning Rate Scheduler
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', patience=5, factor=0.5, verbose=True)
-    
-for epoch in range(config.NUM_EPOCHS):
-    model.train()
-    totalTrainLoss = 0
-    totalTestLoss = 0
-    totalSSIM = 0
-    totalPSNR = 0
-    totalMSE = 0
-        
-    # Trenowanie modelu
-    print(f"[INFO] Epoka {epoch + 1}/{config.NUM_EPOCHS}")
-    
-    for (x, y) in tqdm(trainLoader):
-        # send the input to the device
-        (x, y) = (x.to(config.DEVICE), y.to(config.DEVICE))           
-        # Obliczanie prognoz i straty
-        pred = model(x)
-        loss = lossFunc(pred, y)
+
+# Rejestracja sygnału przerwania (Ctrl + C)
+signal.signal(signal.SIGINT, handle_interrupt)
+
+try:
+    for epoch in range(config.NUM_EPOCHS):
+        model.train()
+        totalTrainLoss = 0
+        totalTestLoss = 0
+        totalSSIM = 0
+        totalPSNR = 0
+        totalMSE = 0
             
-        # Backpropagation i aktualizacja wag
-        opt.zero_grad()
-        loss.backward()
-        opt.step()
-            
-        totalTrainLoss += loss.item()
+        # Trenowanie modelu
+        print(f"[INFO] Epoka {epoch + 1}/{config.NUM_EPOCHS}")
         
-    # Walidacja modelu
-    model.eval()
-    with torch.no_grad():
-        for (x, y) in testLoader:
-            (x, y) = (x.to(config.DEVICE), y.to(config.DEVICE))
+        for (x, y) in tqdm(trainLoader):
+            # send the input to the device
+            (x, y) = (x.to(config.DEVICE), y.to(config.DEVICE))           
+            # Obliczanie prognoz i straty
             pred = model(x)
             loss = lossFunc(pred, y)
-            totalTestLoss += loss.item()
+                
+            # Backpropagation i aktualizacja wag
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+                
+            totalTrainLoss += loss.item()
+            
+        # Walidacja modelu
+        model.eval()
+        with torch.no_grad():
+            for (x, y) in testLoader:
+                (x, y) = (x.to(config.DEVICE), y.to(config.DEVICE))
+                pred = model(x)
+                loss = lossFunc(pred, y)
+                totalTestLoss += loss.item()
 
-            # Obliczanie metryk SSIM i PSNR
-            totalSSIM += ssim_metric(pred, y)
-            totalPSNR += psnr_metric(pred, y)
-            totalMSE += mean_squared_error(pred, y)
+                # Obliczanie metryk SSIM i PSNR
+                totalSSIM += ssim_metric(pred, y)
+                totalPSNR += psnr_metric(pred, y)
+                totalMSE += mean_squared_error(pred, y)
+            
+        # Obliczenie średnich strat dla epoki
+        avgTrainLoss = totalTrainLoss / trainSteps
+        avgTestLoss = totalTestLoss / testSteps
+        avgSSIM = totalSSIM / testSteps
+        avgPSNR = totalPSNR / testSteps
+        avgMSE = totalMSE / testSteps
+            
+        H["train_loss"].append(avgTrainLoss)
+        H["test_loss"].append(avgTestLoss)
+        H["ssim"].append(avgSSIM.item())
+        H["psnr"].append(avgPSNR.item())
+
+        Train_loss.append(avgTrainLoss)
+        Test_loss.append(avgTestLoss)
+        SSIM.append(avgSSIM)
+        PSNR.append(avgPSNR)
+        MSE.append(avgMSE)
         
-    # Obliczenie średnich strat dla epoki
-    avgTrainLoss = totalTrainLoss / trainSteps
-    avgTestLoss = totalTestLoss / testSteps
-    avgSSIM = totalSSIM / testSteps
-    avgPSNR = totalPSNR / testSteps
-    avgMSE = totalMSE / testSteps
-        
-    H["train_loss"].append(avgTrainLoss)
-    H["test_loss"].append(avgTestLoss)
-    H["ssim"].append(avgSSIM.item())
-    H["psnr"].append(avgPSNR.item())
+        # Informacje o postępie
+        print(f"[INFO] EPOKA: {epoch + 1}/{config.NUM_EPOCHS}")
+        print(f"Train Loss: {avgTrainLoss:.6f}, Test Loss: {avgTestLoss:.6f}")
+        print(f"SSIM: {avgSSIM:.6f}, PSNR: {avgPSNR:.6f}, MSE: {avgMSE:.6f}")
 
-    Train_loss.append(avgTrainLoss)
-    Test_loss.append(avgTestLoss)
-    SSIM.append(avgSSIM)
-    PSNR.append(avgPSNR)
-    MSE.append(avgMSE)
-     
-    # Informacje o postępie
-    print(f"[INFO] EPOKA: {epoch + 1}/{config.NUM_EPOCHS}")
-    print(f"Train Loss: {avgTrainLoss:.6f}, Test Loss: {avgTestLoss:.6f}")
-    print(f"SSIM: {avgSSIM:.6f}, PSNR: {avgPSNR:.6f}, MSE: {avgMSE:.6f}")
+        # Learning Rate Scheduling
+        scheduler.step(avgTestLoss)
 
-    # Learning Rate Scheduling
-    scheduler.step(avgTestLoss)
+        # Early Stopping: Sprawdzenie, czy strata na danych testowych się poprawiła
+        if avgTestLoss < best_test_loss:
+            best_test_loss = avgTestLoss
+            early_stopping_counter = 0  # Resetujemy licznik, bo mamy poprawę
 
-    # Early Stopping: Sprawdzenie, czy strata na danych testowych się poprawiła
-    if avgTestLoss < best_test_loss:
-        best_test_loss = avgTestLoss
-        early_stopping_counter = 0  # Resetujemy licznik, bo mamy poprawę
+            # Zapisanie modelu
+            # print("[INFO] Zapisuję model do pliku...")
+            torch.save(model.state_dict(), config.MODEL_IN_PROGRESS_PATH)
 
-        # Zapisanie modelu
-        # print("[INFO] Zapisuję model do pliku...")
-        torch.save(model.state_dict(), config.MODEL_IN_PROGRESS_PATH)
+            print(f"[INFO] Najlepszy wynik test loss: {best_test_loss:.6f}")
+        else:
+            early_stopping_counter += 1
+            print(f"[INFO] Brak poprawy test loss przez {early_stopping_counter} epok.")
+            
+            if early_stopping_counter >= early_stopping_patience:
+                print(f"[INFO] Early stopping aktywowany. Zatrzymujemy trening.")
+                break
 
-        print(f"[INFO] Najlepszy wynik test loss: {best_test_loss:.6f}")
-    else:
-        early_stopping_counter += 1
-        print(f"[INFO] Brak poprawy test loss przez {early_stopping_counter} epok.")
-        
-        if early_stopping_counter >= early_stopping_patience:
-            print(f"[INFO] Early stopping aktywowany. Zatrzymujemy trening.")
-            break
-    
+except KeyboardInterrupt:
+    print("\n[INFO] Trening zakończony przez użytkownika.")
+    # Zatrzymanie pętli po naciśnięciu Ctrl+C
+
 # Koniec trenowania
 endTime = time.time()
 print(f"[INFO] Całkowity czas trenowania: {endTime - startTime:.2f} sekundy")
