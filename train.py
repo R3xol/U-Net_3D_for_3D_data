@@ -104,12 +104,11 @@ print("[INFO] Rozpoczynam trenowanie modelu...")
 startTime = time.time()
 
 # Inicjalizacja EarlyStopping
-early_stopping_patience = 7000  # Liczba epok bez poprawy, po których zatrzymamy trening
-early_stopping_counter = 0
+early_stopping_patience = 10  # Liczba epok bez poprawy, po których zatrzymamy trening
 best_test_loss = float("inf")
 
 # Learning Rate Scheduler
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', patience=10, factor=0.5)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', patience=5, factor=0.5)
 
 # Rejestracja sygnału przerwania (Ctrl + C)
 signal.signal(signal.SIGINT, handle_interrupt)
@@ -191,7 +190,6 @@ try:
             early_stopping_counter = 0  # Resetujemy licznik, bo mamy poprawę
 
             # Zapisanie modelu
-            # print("[INFO] Zapisuję model do pliku...")
             torch.save(model.state_dict(), config.MODEL_IN_PROGRESS_PATH)
 
             print(f"[INFO] Najlepszy wynik test loss: {best_test_loss:.6f}")

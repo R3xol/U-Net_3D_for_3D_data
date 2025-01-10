@@ -44,6 +44,7 @@ if __name__ == "__main__":
         mse_results = process_h5_files(data_predict)
         print("MSE Results:", mse_results)
 
+        print(cell_b_1.min(), cell_b_1.max())
         cell_b_1 = cell_b_1[29, 100, :]
         print(cell_b_1)
 

@@ -29,11 +29,29 @@ class SegmentationDataset(Dataset):
 			oct = f['OCT'][:]
 
 		cell = np.float32(cell)
+		oct = np.float32(oct)
 
+		'''# Min-Max normalization for cell and oct
+		cell_min, cell_max = cell.min(), cell.max()
+		oct_min, oct_max = oct.min(), oct.max()
+        
+        # Avoid division by zero in case of constant arrays
+		if cell_max > cell_min:
+			cell = (cell - cell_min) / (cell_max - cell_min)
+		else:
+			cell = np.zeros_like(cell)
+
+		if oct_max > oct_min:
+			oct = (oct - oct_min) / (oct_max - oct_min)
+		else:
+			oct = np.zeros_like(oct)'''		
+
+		# Convert to torch tensors
 		cell = torch.from_numpy(cell)
 		oct = torch.from_numpy(oct)
 
-		cell = cell.unsqueeze(0)  # Dodaj wymiar kanału: (1, D, H, W)
+		# Dodaj wymiar kanału: (1, D, H, W)
+		cell = cell.unsqueeze(0)  
 		oct = oct.unsqueeze(0)
 
 		# return a tuple of the image and its mask
