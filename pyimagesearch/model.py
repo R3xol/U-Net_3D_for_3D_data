@@ -21,7 +21,7 @@ class Block3D(Module):
         # store the 3D convolution, BatchNorm, and THAN layers
         self.conv1 = Conv3d(inChannels, outChannels, kernel_size=3, padding=1)
         self.bn1 = BatchNorm3d(outChannels)
-        self.than = Tanh()
+        self.than = ReLU()#Tanh()
         self.conv2 = Conv3d(outChannels, outChannels, kernel_size=3, padding=1)
         self.bn2 = BatchNorm3d(outChannels)
 

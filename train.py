@@ -21,11 +21,12 @@ import numpy as np
 import signal
 import sys
 
-from torchmetrics import StructuralSimilarityIndexMeasure, PeakSignalNoiseRatio, MeanSquaredError
+from torchmetrics.image import StructuralSimilarityIndexMeasure, PeakSignalNoiseRatio
+from torchmetrics import MeanSquaredError
 
 # Metryki SSIM i PSNR
 ssim_metric = StructuralSimilarityIndexMeasure()#.to(config.DEVICE)
-psnr_metric = PeakSignalNoiseRatio()#.to(config.DEVICE)
+psnr_metric = PeakSignalNoiseRatio()
 mean_squared_error = MeanSquaredError()
 
 # Funkcja, która pozwala na przerwanie pętli z zewnątrz (np. przez Ctrl+C)
@@ -86,8 +87,10 @@ opt = Adam(model.parameters(), lr=config.INIT_LR)
 trainSteps = len(trainLoader)
 testSteps = len(testLoader)
 
-print(trainSteps)
-print(testSteps)
+print(f"[INFO] Liczba kroków na epoke (train): {trainSteps}")
+print(f"[INFO] Liczba kroków na epoke (test): {testSteps}")
+
+print("\n")
 
 # Inicjalizacja słownika
 H = {"train_loss": [], "test_loss": [], "ssim": [], "psnr": []}
@@ -101,15 +104,17 @@ print("[INFO] Rozpoczynam trenowanie modelu...")
 startTime = time.time()
 
 # Inicjalizacja EarlyStopping
-early_stopping_patience = 10  # Liczba epok bez poprawy, po których zatrzymamy trening
+early_stopping_patience = 7000  # Liczba epok bez poprawy, po których zatrzymamy trening
 early_stopping_counter = 0
 best_test_loss = float("inf")
 
 # Learning Rate Scheduler
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', patience=5, factor=0.5, verbose=True)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', patience=10, factor=0.5)
 
 # Rejestracja sygnału przerwania (Ctrl + C)
 signal.signal(signal.SIGINT, handle_interrupt)
+
+cnt_epoch = 0
 
 try:
     for epoch in range(config.NUM_EPOCHS):
@@ -168,6 +173,8 @@ try:
         SSIM.append(avgSSIM)
         PSNR.append(avgPSNR)
         MSE.append(avgMSE)
+
+        cnt_epoch = cnt_epoch + 1
         
         # Informacje o postępie
         print(f"[INFO] EPOKA: {epoch + 1}/{config.NUM_EPOCHS}")
@@ -176,6 +183,7 @@ try:
 
         # Learning Rate Scheduling
         scheduler.step(avgTestLoss)
+        print(f"[INFO] Aktualny współczynnik uczenia: {scheduler.optimizer.param_groups[0]['lr']:.6f}")
 
         # Early Stopping: Sprawdzenie, czy strata na danych testowych się poprawiła
         if avgTestLoss < best_test_loss:
@@ -199,6 +207,8 @@ except KeyboardInterrupt:
     print("\n[INFO] Trening zakończony przez użytkownika.")
     # Zatrzymanie pętli po naciśnięciu Ctrl+C
 
+print('\n')
+
 # Koniec trenowania
 endTime = time.time()
 print(f"[INFO] Całkowity czas trenowania: {endTime - startTime:.2f} sekundy")
@@ -206,12 +216,17 @@ print(f"[INFO] Całkowity czas trenowania: {endTime - startTime:.2f} sekundy")
 # Zapisanie modelu
 print("[INFO] Zapisuję model do pliku...")
 torch.save(model.state_dict(), config.MODEL_PATH)
-    
+
+Test_loss = np.array(Test_loss)
+Train_loss = np.array(Train_loss)
+SSIM = np.array(SSIM)
+
 # Rysowanie wykresów strat
 plt.style.use("ggplot")
 plt.figure()
-plt.plot(H["train_loss"], label="train_loss")
-plt.plot(H["test_loss"], label="test_loss")
+plt.plot(Train_loss, label="train_loss")
+plt.plot(Test_loss, label="test_loss")
+#plt.plot(SSIM, label="SSMI")
 plt.title("Strata treningowa i walidacyjna")
 plt.xlabel("Epoka")
 plt.ylabel("Strata")
@@ -220,10 +235,7 @@ plt.savefig(config.PLOT_PATH)
 
 # Zapis danych procesu uczenia
 PSNR = np.array(PSNR)
-SSIM = np.array(SSIM)
 MSE = np.array(MSE)
-Test_loss = np.array(Test_loss)
-Train_loss = np.array(Train_loss)
 
 combined_matrix = np.array([
     ["MSE"] + MSE.tolist(),
