@@ -50,7 +50,7 @@ if __name__ == "__main__":
             #"MSE": (0, 0.1),
             "PSNR": (0, 40),
             "SSIM": (0, 1),
-            "Test_loss": (0, 2000),
+            "Test_loss": (0, 2300),
             "Train_loss": (0, 1000)
         }
 
