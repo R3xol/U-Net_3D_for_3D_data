@@ -1,4 +1,6 @@
-from torch.nn import ConvTranspose3d, Conv3d, MaxPool3d, Module, ModuleList, ReLU, BatchNorm3d, Tanh
+# dodać Dropout
+
+from torch.nn import ConvTranspose3d, Conv3d, MaxPool3d, Module, ModuleList, ReLU, BatchNorm3d, Tanh, Dropout
 from torchvision.transforms import CenterCrop
 import torch.nn.functional as F
 import torch
@@ -16,18 +18,26 @@ import torch
         return self.conv2(self.relu(self.conv1(x)))'''
 
 class Block3D(Module):
-    def __init__(self, inChannels, outChannels):
+    def __init__(self, inChannels, outChannels, dropout_rate=0.2):
         super().__init__()
         # store the 3D convolution, BatchNorm, and ReLU layers
         self.conv1 = Conv3d(inChannels, outChannels, kernel_size=3, padding=1)
         self.bn1 = BatchNorm3d(outChannels)
         self.relu = ReLU()#Tanh()
+        self.dropout = Dropout(p=dropout_rate)
         self.conv2 = Conv3d(outChannels, outChannels, kernel_size=3, padding=1)
         self.bn2 = BatchNorm3d(outChannels)
 
-    def forward(self, x):
+    '''def forward(self, x):
         # apply CONV => BatchNorm => ReLU => CONV => BatchNorm block
         x = self.bn2(self.conv2(self.relu(self.bn1(self.conv1(x)))))
+        return x'''
+    
+    # Z dropoutem
+    def forward(self, x):
+        # apply CONV => BatchNorm => ReLU => CONV => BatchNorm => Dropout block
+        x = self.bn1(self.conv1(x))
+        x = self.dropout(self.bn2(self.conv2(self.relu(x))))        
         return x
 
 class Encoder3D(Module):
@@ -105,3 +115,16 @@ class UNet3D(Module):
         if self.retainDim:
             map = F.interpolate(map, size=self.outSize, mode="trilinear", align_corners=False)
         return map
+
+
+from torch.nn import MSELoss
+
+class RMSELoss(torch.nn.Module):
+    def __init__(self):
+        super(RMSELoss,self).__init__()
+
+    def forward(self,x,y):
+        criterion = MSELoss()
+        eps = 1e-6
+        loss = torch.sqrt(criterion(x, y) + eps)
+        return loss

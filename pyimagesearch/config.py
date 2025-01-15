@@ -39,9 +39,9 @@ MODEL_IN_PROGRESS_PATH = os.path.sep.join([BASE_OUTPUT, "unet3d_BEST.pth"])
 # lokalizacja do zapisu przewidywań
 PREDICT_PATHS = "./output/predict"
 
-BATCH_SIZE = 4  # Rozmiar batcha
+BATCH_SIZE = 1  # Rozmiar batcha
 INIT_LR = 1e-3  # Początkowa wartość learning rate
-NUM_EPOCHS = 1000  # Liczba epok
+NUM_EPOCHS = 7000  # Liczba epok
 
 PIN_MEMORY = True  # Wspomaganie pamięci dla GPU
 

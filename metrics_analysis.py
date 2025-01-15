@@ -21,7 +21,7 @@ def load_data(csv_path):
 # Funkcja do rysowania wykresów i zapisywania ich jako pliki PNG
 def plot_and_save(data, output_dir, y_limits=None):
     for key, values in data.items():
-        plt.figure()
+        plt.figure(figsize=(12, 7))
         plt.plot(values, label=key)
         plt.title(f"{key} over Iterations")
         plt.xlabel("Iterations")
@@ -47,11 +47,11 @@ if __name__ == "__main__":
         
         # Słownik zakresów osi Y dla poszczególnych metryk
         y_limits = {
-            #"MSE": (0, 0.1),
+            "MSE": (0, 2000),
             "PSNR": (0, 40),
             "SSIM": (0, 1),
-            "Test_loss": (0, 2300),
-            "Train_loss": (0, 1000)
+            "Test_loss": (0, 60),
+            "Train_loss": (0, 35)
         }
 
         # Rysowanie wykresów i zapisywanie ich do plików

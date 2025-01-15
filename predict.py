@@ -8,6 +8,7 @@ import torch
 import h5py
 import os
 from pyimagesearch.model import UNet3D
+from sklearn.preprocessing import StandardScaler
 
 # odczyt z hdf5
 def read_HDF5(file_name):
@@ -27,6 +28,14 @@ def save_to_H5_file(file_name, cell, predict):
 	print("[INFO] save down predict...")
 	
 def make_predictions(model, oct):
+
+	# Skalowanie danych
+	'''oct_scaler = StandardScaler()
+	# Spłaszcz dane, przeskaluj, a następnie przywróć ich oryginalny kształt
+	original_oct_shape = oct.shape
+
+	oct = oct_scaler.fit_transform(oct.flatten().reshape(-1, 1)).reshape(original_oct_shape)'''
+
 	# set model to evaluation mode
 	model.eval()
 	oct = torch.from_numpy(oct)#.to(config.DEVICE)
@@ -46,6 +55,7 @@ def make_predictions(model, oct):
     
     # Przenieś tensor na CPU (jeśli jest na GPU) i konwertuj na numpy
 	predImg_numpy = predImg.numpy()  # Zamiana na numpy
+
 	return predImg_numpy
 
 
@@ -57,7 +67,7 @@ print("[INFO] load up model...")
 #unet = torch.load(config.MODEL_PATH)#.to(config.DEVICE)
 
 unet = UNet3D()  # Stwórz instancję swojego modelu
-unet.load_state_dict(torch.load(config.MODEL_PATH))  # Wczytaj state_dict
+unet.load_state_dict(torch.load(config.MODEL_PATH))  # Wczytaj state_dict MODEL_PATH/MODEL_IN_PROGRESS_PATH
 # unet = unet.to(config.DEVICE)  # Jeśli używasz GPU, odkomentuj to
 
 for i, file_name in enumerate(sorted(os.listdir(config.DATASET_PATH_PREDICT))):
@@ -69,6 +79,12 @@ for i, file_name in enumerate(sorted(os.listdir(config.DATASET_PATH_PREDICT))):
 		cell_matrix, OCT_matrix = read_HDF5(image_path)
 
 		predict_matrix = make_predictions(unet, OCT_matrix)
+
+		# Powrót do oryginalnego zakresu danych
+		'''cell_scaler = StandardScaler()
+		cell_scaler.fit(cell_matrix.flatten().reshape(-1, 1))  # Fit on original data
+		original_cell_shape = predict_matrix.shape
+		predict_matrix = cell_scaler.inverse_transform(predict_matrix.flatten().reshape(-1, 1)).reshape(original_cell_shape)'''
 
 		cell_matrix = np.float32(cell_matrix)
 

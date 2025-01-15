@@ -3,9 +3,10 @@
 # import the necessary packages
 from pyimagesearch.dataset import SegmentationDataset
 from pyimagesearch.model import UNet3D
-model = UNet3D()
+from pyimagesearch.model import RMSELoss
+model = UNet3D() 
 from pyimagesearch import config
-from torch.nn import MSELoss #BCEWithLogitsLoss
+from torch.nn import MSELoss
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
@@ -65,7 +66,6 @@ if device == "cuda":
 else:
     nr_workers = 0
 
-
 # Utworzenie DataLoaderów
 trainLoader = DataLoader(trainDS, shuffle=True,
                              batch_size=config.BATCH_SIZE,
@@ -76,11 +76,12 @@ testLoader = DataLoader(testDS, shuffle=False,
                             pin_memory=config.PIN_MEMORY,
                             num_workers=nr_workers)
     
-
 model = model.to(config.DEVICE)
     
 # Inicjalizacja funkcji straty i optymalizatora
-lossFunc = MSELoss() #BCEWithLogitsLoss()
+#lossFunc = MSELoss() #BCEWithLogitsLoss()
+lossFunc = RMSELoss()
+
 opt = Adam(model.parameters(), lr=config.INIT_LR)
     
 # Obliczenie liczby kroków na epokę
@@ -104,11 +105,11 @@ print("[INFO] Rozpoczynam trenowanie modelu...")
 startTime = time.time()
 
 # Inicjalizacja EarlyStopping
-early_stopping_patience = 10  # Liczba epok bez poprawy, po których zatrzymamy trening
+early_stopping_patience = 10000  # Liczba epok bez poprawy, po których zatrzymamy trening
 best_test_loss = float("inf")
 
 # Learning Rate Scheduler
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', patience=5, factor=0.5)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', patience=1000, factor=0.5)
 
 # Rejestracja sygnału przerwania (Ctrl + C)
 signal.signal(signal.SIGINT, handle_interrupt)
@@ -181,7 +182,7 @@ try:
         print(f"SSIM: {avgSSIM:.6f}, PSNR: {avgPSNR:.6f}, MSE: {avgMSE:.6f}")
 
         # Learning Rate Scheduling
-        scheduler.step(avgTestLoss)
+        scheduler.step(avgTestLoss)  #tutaj musi być avgTestLoss Train tylko do testów
         print(f"[INFO] Aktualny współczynnik uczenia: {scheduler.optimizer.param_groups[0]['lr']:.6f}")
 
         # Early Stopping: Sprawdzenie, czy strata na danych testowych się poprawiła
