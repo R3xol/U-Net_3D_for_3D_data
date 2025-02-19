@@ -8,9 +8,10 @@ data_predict = 'C:/Python/Studia/U-NET/output/predict'
 # Function to read HDF5 files
 def read_HDF5(file_name):
     with h5py.File(file_name, 'r') as f:
+        OCT_matrix = f['OCT'][:]
         cell_matrix = f['Cell_base'][:]
         predict_matrix = f['Cell_predict'][:]
-    return cell_matrix, predict_matrix
+    return OCT_matrix, cell_matrix, predict_matrix
 
 # Function to calculate Mean Squared Error (MSE)
 def calculate_mse(matrix1, matrix2):
@@ -25,7 +26,7 @@ def process_h5_files(directory):
         file_path = os.path.join(directory, file_name)
         
         # Read matrices from file
-        cell_matrix, predict_matrix = read_HDF5(file_path)
+        OCT_matrix, cell_matrix, predict_matrix = read_HDF5(file_path)
 
         # Calculate MSE
         mse = calculate_mse(cell_matrix, predict_matrix)

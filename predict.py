@@ -18,11 +18,12 @@ def read_HDF5(file_name):
     return cell_matrix, OCT_matrix
 
 # Zapis do jednego pliku HDF5
-def save_to_H5_file(file_name, cell, predict):
+def save_to_H5_file(file_name,OCT, cell, predict):
 	# Zamiana końcówki
 	new_filename = file_name.replace("_converted.h5", "_predict.h5",)
 	path_save = os.path.sep.join([config.PREDICT_PATHS, new_filename])
 	with h5py.File(path_save, 'w') as f:
+		f.create_dataset('OCT', data = OCT)
 		f.create_dataset('Cell_base', data = cell) 
 		f.create_dataset('Cell_predict', data = predict)
 	print("[INFO] save down predict...")
@@ -88,4 +89,4 @@ for i, file_name in enumerate(sorted(os.listdir(config.DATASET_PATH_PREDICT))):
 
 		cell_matrix = np.float32(cell_matrix)
 
-		save_to_H5_file(file_name, cell_matrix, predict_matrix)
+		save_to_H5_file(file_name, OCT_matrix, cell_matrix, predict_matrix)
