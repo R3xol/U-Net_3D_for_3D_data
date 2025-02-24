@@ -5,18 +5,6 @@ from torchvision.transforms import CenterCrop
 import torch.nn.functional as F
 import torch
 
-'''class Block3D(Module):
-    def __init__(self, inChannels, outChannels):
-        super().__init__()
-        # store the 3D convolution and ReLU layers
-        self.conv1 = Conv3d(inChannels, outChannels, kernel_size=3, padding=1)
-        self.relu = ReLU()
-        self.conv2 = Conv3d(outChannels, outChannels, kernel_size=3, padding=1)
-
-    def forward(self, x):
-        # apply CONV => RELU => CONV block
-        return self.conv2(self.relu(self.conv1(x)))'''
-
 class Block3D(Module):
     def __init__(self, inChannels, outChannels, dropout_rate=0.2):
         super().__init__()
@@ -28,12 +16,6 @@ class Block3D(Module):
         self.conv2 = Conv3d(outChannels, outChannels, kernel_size=3, padding=1)
         self.bn2 = BatchNorm3d(outChannels)
 
-    '''def forward(self, x):
-        # apply CONV => BatchNorm => ReLU => CONV => BatchNorm block
-        x = self.bn2(self.conv2(self.relu(self.bn1(self.conv1(x)))))
-        return x'''
-    
-    # Z dropoutem
     def forward(self, x):
         # apply CONV => BatchNorm => ReLU => CONV => BatchNorm => Dropout block
         x = self.bn1(self.conv1(x))

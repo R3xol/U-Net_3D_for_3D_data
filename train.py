@@ -36,13 +36,6 @@ if __name__ == '__main__':
         print("\n[INFO] Trening przerwany przez użytkownika.")
         raise KeyboardInterrupt  # Podnosi wyjątek, aby przerwać pętlę, ale kontynuować kod za pętlą
 
-    '''# Path to the directory
-    data_directory_test = './dataset/test'
-    data_directory = './dataset/train'''
-
-    '''index, trainImages = enumerate(sorted(os.listdir(data_directory)))
-    index_test, testImages = enumerate(sorted(os.listdir(data_directory_test)))'''
-
     testImages = []
 
     file_names = os.listdir(config.DATASET_PATH_TRAIN)

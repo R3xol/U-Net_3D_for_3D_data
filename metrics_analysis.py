@@ -38,7 +38,7 @@ def plot_and_save(data, output_dir, y_limits=None):
         plt.close()
         print(f"Wykres {key} zapisany do {output_file}")
 
-# Główna część programu
+
 if __name__ == "__main__":
     # Wczytanie danych z pliku CSV
     try:

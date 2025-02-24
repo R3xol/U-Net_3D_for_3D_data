@@ -35,19 +35,6 @@ class SegmentationDataset(Dataset):
 		cell = np.float32(cell)
 		oct = np.float32(oct)	
 
-		# Spłaszcz dane, przeskaluj, a następnie przywróć ich oryginalny kształt
-		'''original_cell_shape = cell.shape
-		original_oct_shape = oct.shape
-
-		cell = self.cell_scaler.fit_transform(cell.flatten().reshape(-1, 1)).reshape(original_cell_shape)
-		oct = self.oct_scaler.fit_transform(oct.flatten().reshape(-1, 1)).reshape(original_oct_shape)'''
-		
-		'''print("\n")
-		print('Rozmiar', cell.shape, oct.shape)
-		print('Zakres',oct.min(), oct.max())
-		print("Średnia", np.mean(cell))
-		print("\n")'''
-
 		# Convert to torch tensors
 		cell = torch.from_numpy(cell)
 		oct = torch.from_numpy(oct)
@@ -59,8 +46,8 @@ class SegmentationDataset(Dataset):
 		# return a tuple of the image and its mask
 		return (oct, cell)
 	
-	#def Min_max():
-		'''# Min-Max normalization for cell and oct
+	def _MinMaxNormalization():
+		# Min-Max normalization for cell and oct
 		cell_min, cell_max = cell.min(), cell.max()
 		oct_min, oct_max = oct.min(), oct.max()
         
@@ -73,8 +60,5 @@ class SegmentationDataset(Dataset):
 		if oct_max > oct_min:
 			oct = (oct - oct_min) / (oct_max - oct_min)
 		else:
-			oct = np.zeros_like(oct)'''	
+			oct = np.zeros_like(oct)
 		
-# Example: Reverse transformation to check correctness
-# cell = self.cell_scaler.inverse_transform(cell.flatten().reshape(-1, 1)).reshape(original_cell_shape)
-# oct = self.oct_scaler.inverse_transform(oct.flatten().reshape(-1, 1)).reshape(original_oct_shape)
