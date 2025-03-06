@@ -41,7 +41,7 @@ PREDICT_PATHS = "./output/predict"
 
 BATCH_SIZE = 1  # Rozmiar batcha
 INIT_LR = 1e-3  # Początkowa wartość learning rate
-NUM_EPOCHS = 7000  # Liczba epok
+NUM_EPOCHS = 10000  # Liczba epok
 
 PIN_MEMORY = True  # Wspomaganie pamięci dla GPU
 

@@ -1,25 +1,24 @@
-# dodać Dropout
-
 from torch.nn import ConvTranspose3d, Conv3d, MaxPool3d, Module, ModuleList, ReLU, BatchNorm3d, Tanh, Dropout
 from torchvision.transforms import CenterCrop
 import torch.nn.functional as F
 import torch
 
 class Block3D(Module):
-    def __init__(self, inChannels, outChannels, dropout_rate=0.2):
+    def __init__(self, inChannels, outChannels, dropout_rate=0.02):
         super().__init__()
         # store the 3D convolution, BatchNorm, and ReLU layers
         self.conv1 = Conv3d(inChannels, outChannels, kernel_size=3, padding=1)
         self.bn1 = BatchNorm3d(outChannels)
-        self.relu = ReLU()#Tanh()
-        self.dropout = Dropout(p=dropout_rate)
+        self.relu1 = ReLU()#Tanh()
         self.conv2 = Conv3d(outChannels, outChannels, kernel_size=3, padding=1)
         self.bn2 = BatchNorm3d(outChannels)
+        self.relu2 = ReLU()
+        self.dropout = Dropout(p=dropout_rate)
 
     def forward(self, x):
-        # apply CONV => BatchNorm => ReLU => CONV => BatchNorm => Dropout block
-        x = self.bn1(self.conv1(x))
-        x = self.dropout(self.bn2(self.conv2(self.relu(x))))        
+        # CONV => BatchNorm => ReLU => CONV => BatchNorm => ReLU => Dropout
+        x = self.relu1(self.bn1(self.conv1(x)))
+        x = self.dropout(self.relu2(self.bn2(self.conv2(x))))        
         return x
 
 class Encoder3D(Module):

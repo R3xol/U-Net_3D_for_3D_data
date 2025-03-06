@@ -103,7 +103,7 @@ if __name__ == '__main__':
     best_test_loss = float("inf")
 
     # Learning Rate Scheduler
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', patience=1000, factor=0.5)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', patience=10000, factor=0.5)
 
     # Rejestracja sygnału przerwania (Ctrl + C)
     signal.signal(signal.SIGINT, handle_interrupt)
