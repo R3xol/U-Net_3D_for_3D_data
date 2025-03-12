@@ -23,8 +23,8 @@ def plot_and_save(data, output_dir, y_limits=None):
     for key, values in data.items():
         plt.figure(figsize=(12, 7))
         plt.plot(values, label=key)
-        plt.title(f"{key} over Iterations")
-        plt.xlabel("Iterations")
+        plt.title(f"{key}")
+        plt.xlabel("Epoki")
         plt.ylabel(key)
         plt.legend()
         plt.grid(True)
@@ -51,7 +51,7 @@ if __name__ == "__main__":
             "PSNR": (0, 40),
             "SSIM": (0, 1),
             "Test_loss": (0, 60),
-            "Train_loss": (0, 35)
+            "Train_loss": (0, 32)
         }
 
         # Rysowanie wykresów i zapisywanie ich do plików
