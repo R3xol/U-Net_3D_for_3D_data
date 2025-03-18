@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torch
 
 class Block3D(Module):
-    def __init__(self, inChannels, outChannels, dropout_rate=0.00):
+    def __init__(self, inChannels, outChannels, dropout_rate=0.10):
         super().__init__()
         # store the 3D convolution, BatchNorm, and ReLU layers
         self.conv1 = Conv3d(inChannels, outChannels, kernel_size=3, padding=1)
