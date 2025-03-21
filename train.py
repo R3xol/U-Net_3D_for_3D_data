@@ -8,7 +8,7 @@ model = UNet3D()
 from pyimagesearch import config
 from torch.nn import MSELoss
 from torch.optim import Adam
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 from sklearn.model_selection import train_test_split
 from torchvision import transforms
 from imutils import paths
@@ -24,6 +24,7 @@ import sys
 
 from torchmetrics.image import StructuralSimilarityIndexMeasure, PeakSignalNoiseRatio
 from torchmetrics import MeanSquaredError
+from torch.utils.data import Subset
 
 if __name__ == '__main__':
     # Metryki SSIM i PSNR
@@ -36,7 +37,8 @@ if __name__ == '__main__':
         print("\n[INFO] Trening przerwany przez użytkownika.")
         raise KeyboardInterrupt  # Podnosi wyjątek, aby przerwać pętlę, ale kontynuować kod za pętlą
 
-    testImages = []
+    # Wczytanie train i test z oddzielnych katalogów
+    '''testImages = []
 
     file_names = os.listdir(config.DATASET_PATH_TRAIN)
 
@@ -47,7 +49,30 @@ if __name__ == '__main__':
 
     # create the train and test datasets
     trainDS = SegmentationDataset(imagePaths=trainImages, data_Directory=config.DATASET_PATH_TRAIN)
-    testDS = SegmentationDataset(imagePaths=testImages, data_Directory=config.DATASET_PATH_TEST)
+    testDS = SegmentationDataset(imagePaths=testImages, data_Directory=config.DATASET_PATH_TEST)'''
+
+    all_Images = []
+
+    file_names = os.listdir(config.DATASET_PATH_ALL)
+
+    DS = [f for f in file_names if os.path.isfile(os.path.join(config.DATASET_PATH_ALL, f))]
+
+    DS = SegmentationDataset(imagePaths=DS, data_Directory=config.DATASET_PATH_ALL)
+
+    # Ustawienie ziarna dla powtarzalności
+    torch.manual_seed(13)  # Ziarno dla powtarzalności
+
+    # Podział zbioru danych na treningowy (80%) i testowy (20%)
+    train_size = int(0.7 * len(DS))  # 70% na zbiór treningowy
+    test_size = len(DS) - train_size  # 30% na zbiór testowy
+    trainDS, testDS = random_split(DS, [train_size, test_size])
+
+    # Ograniczenie liczby danych o połowę
+    '''train_indices = list(range(len(trainDS)))[:len(trainDS) // 2]
+    test_indices = list(range(len(testDS)))[:len(testDS) // 2]
+
+    trainDS = Subset(trainDS, train_indices)
+    testDS = Subset(testDS, test_indices)'''
 
     print(f"[INFO] found {len(trainDS)} examples in the training set...")
     print(f"[INFO] found {len(testDS)} examples in the test set...")
@@ -59,6 +84,9 @@ if __name__ == '__main__':
         nr_workers = torch.cuda.device_count() * 4
     else:
         nr_workers = 0
+
+    print("Device:            ",device)
+    print("Number of threads: ", nr_workers)
 
     # Utworzenie DataLoaderów
     trainLoader = DataLoader(trainDS, shuffle=True,
@@ -99,11 +127,11 @@ if __name__ == '__main__':
     startTime = time.time()
 
     # Inicjalizacja EarlyStopping
-    early_stopping_patience = 50  # Liczba epok bez poprawy, po których zatrzymamy trening
+    early_stopping_patience = 30  # Liczba epok bez poprawy, po których zatrzymamy trening
     best_test_loss = float("inf")
 
     # Learning Rate Scheduler
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', patience=15, factor=0.5)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', patience=20, factor=0.5)
 
     # Rejestracja sygnału przerwania (Ctrl + C)
     signal.signal(signal.SIGINT, handle_interrupt)
@@ -164,9 +192,12 @@ if __name__ == '__main__':
 
             Train_loss.append(avgTrainLoss)
             Test_loss.append(avgTestLoss)
-            SSIM.append(avgSSIM)
+            '''SSIM.append(avgSSIM)
             PSNR.append(avgPSNR)
-            MSE.append(avgMSE)
+            MSE.append(avgMSE)'''
+            SSIM.append(avgSSIM.cpu().numpy())  # Przeniesienie do CPU przed konwersją
+            PSNR.append(avgPSNR.cpu().numpy())
+            MSE.append(avgMSE.cpu().numpy())
 
             cnt_epoch = cnt_epoch + 1
             
@@ -185,6 +216,7 @@ if __name__ == '__main__':
                 early_stopping_counter = 0  # Resetujemy licznik, bo mamy poprawę
 
                 # Zapisanie modelu
+                print(f"[INFO] Zapisuję najlepszy model...")
                 torch.save(model.state_dict(), config.MODEL_IN_PROGRESS_PATH)
 
                 print(f"[INFO] Najlepszy wynik test loss: {best_test_loss:.6f}")
@@ -198,6 +230,14 @@ if __name__ == '__main__':
 
     except KeyboardInterrupt:
         print("\n[INFO] Trening zakończony przez użytkownika.")
+        # Zamknięcie DataLoaderów
+        if hasattr(trainLoader.dataset, 'close'):
+            trainLoader.dataset.close()
+        if hasattr(testLoader.dataset, 'close'):
+            testLoader.dataset.close()
+        # Zapisanie modelu przed wyjściem
+        print(f"[INFO] Zapisuję model po zatrzymaniu...")
+        torch.save(model.state_dict(), config.MODEL_OUTPUT)
         # Zatrzymanie pętli po naciśnięciu Ctrl+C
 
     print('\n')
@@ -241,4 +281,6 @@ if __name__ == '__main__':
     # Zapisanie macierzy jako CSV
     np.savetxt(config.LERNING_RATE_PATHS, combined_matrix, fmt='%s', delimiter=',')
 
-    print(f"Macierz została zapisana do pliku: {config.LERNING_RATE_PATHS}")
+    print(f"[INFO] Macierz została zapisana do pliku: {config.LERNING_RATE_PATHS}")
+    print("[INFO] Zakończono działanie <3")
+

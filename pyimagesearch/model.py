@@ -9,7 +9,7 @@ class Block3D(Module):
         # store the 3D convolution, BatchNorm, and ReLU layers
         self.conv1 = Conv3d(inChannels, outChannels, kernel_size=3, padding=1)
         self.bn1 = BatchNorm3d(outChannels)
-        self.relu1 = ReLU()#Tanh()
+        self.relu1 = ReLU()  # Tanh()
         self.conv2 = Conv3d(outChannels, outChannels, kernel_size=3, padding=1)
         self.bn2 = BatchNorm3d(outChannels)
         self.relu2 = ReLU()
@@ -18,11 +18,26 @@ class Block3D(Module):
     def forward(self, x):
         # CONV => BatchNorm => ReLU => CONV => BatchNorm => ReLU => Dropout
         x = self.relu1(self.bn1(self.conv1(x)))
-        x = self.dropout(self.relu2(self.bn2(self.conv2(x))))        
+        x = self.dropout(self.relu2(self.bn2(self.conv2(x))))
         return x
 
+    '''def __init__(self, inChannels, outChannels, dropout_rate=0.10):
+        super().__init__()
+        self.conv = Conv3d(inChannels, outChannels, kernel_size=3, padding=1)
+        self.bn = BatchNorm3d(outChannels)
+        self.relu = ReLU()
+        self.dropout = Dropout(p=dropout_rate)
+
+    def forward(self, x):
+        # CONV => BatchNorm => ReLU => Dropout
+        x = self.conv(x)        # Warstwa konwolucyjna
+        x = self.bn(x)          # Normalizacja wsadowa
+        x = self.relu(x)        # Funkcja aktywacji
+        x = self.dropout(x)     # Dropout
+        return x'''
+
 class Encoder3D(Module):
-    def __init__(self, channels=(1, 16, 32, 64)):
+    def __init__(self, channels=(1, 4, 8, 16)):  # Zmieniono z (1, 16, 32, 64)
         super().__init__()
         # store the encoder blocks and maxpooling layer
         self.encBlocks = ModuleList(
@@ -43,7 +58,7 @@ class Encoder3D(Module):
         return blockOutputs
 
 class Decoder3D(Module):
-    def __init__(self, channels=(64, 32, 16)):
+    def __init__(self, channels=(16, 8, 4)):  # Zmieniono z (64, 32, 16)
         super().__init__()
         # initialize the upsampler blocks and decoder blocks
         self.upconvs = ModuleList(
@@ -72,8 +87,8 @@ class Decoder3D(Module):
 
 class UNet3D(Module):
     def __init__(self, 
-                 encChannels=(1, 16, 32, 64), 
-                 decChannels=(64, 32, 16), 
+                 encChannels=(1, 4, 8, 16),  # (1, 16, 32, 64)
+                 decChannels=(16, 8, 4),  # (64, 32, 16)
                  nbClasses=1, 
                  retainDim=True, 
                  outSize=(60, 240, 240)):
