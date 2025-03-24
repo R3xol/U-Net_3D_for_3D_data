@@ -1,4 +1,5 @@
-# USAGE
+# dodać RandomSampler
+
 # python train.py
 # import the necessary packages
 from pyimagesearch.dataset import SegmentationDataset
@@ -25,20 +26,15 @@ import sys
 from torchmetrics.image import StructuralSimilarityIndexMeasure, PeakSignalNoiseRatio
 from torchmetrics import MeanSquaredError
 from torch.utils.data import Subset
+from torch.utils.data import SubsetRandomSampler 
 
-if __name__ == '__main__':
-    # Metryki SSIM i PSNR
-    ssim_metric = StructuralSimilarityIndexMeasure().to(config.DEVICE)
-    psnr_metric = PeakSignalNoiseRatio().to(config.DEVICE)
-    mean_squared_error = MeanSquaredError().to(config.DEVICE)
+import h5py
+from sklearn.preprocessing import StandardScaler
+import joblib
 
-    # Funkcja, która pozwala na przerwanie pętli z zewnątrz (np. przez Ctrl+C)
-    def handle_interrupt(signal, frame):
-        print("\n[INFO] Trening przerwany przez użytkownika.")
-        raise KeyboardInterrupt  # Podnosi wyjątek, aby przerwać pętlę, ale kontynuować kod za pętlą
-
-    # Wczytanie train i test z oddzielnych katalogów
-    '''testImages = []
+# Wczytanie danyc z katalogów test i train
+def load_data_from_train_test():
+    testImages = []
 
     file_names = os.listdir(config.DATASET_PATH_TRAIN)
 
@@ -49,9 +45,12 @@ if __name__ == '__main__':
 
     # create the train and test datasets
     trainDS = SegmentationDataset(imagePaths=trainImages, data_Directory=config.DATASET_PATH_TRAIN)
-    testDS = SegmentationDataset(imagePaths=testImages, data_Directory=config.DATASET_PATH_TEST)'''
+    testDS = SegmentationDataset(imagePaths=testImages, data_Directory=config.DATASET_PATH_TEST)
+    return trainDS, testDS
 
-    all_Images = []
+# Wczytanie danyc z katalogu all
+def load_data_from_all(split):
+    DS = []
 
     file_names = os.listdir(config.DATASET_PATH_ALL)
 
@@ -60,12 +59,149 @@ if __name__ == '__main__':
     DS = SegmentationDataset(imagePaths=DS, data_Directory=config.DATASET_PATH_ALL)
 
     # Ustawienie ziarna dla powtarzalności
-    torch.manual_seed(13)  # Ziarno dla powtarzalności
+    torch.manual_seed(13)
 
-    # Podział zbioru danych na treningowy (80%) i testowy (20%)
-    train_size = int(0.7 * len(DS))  # 70% na zbiór treningowy
-    test_size = len(DS) - train_size  # 30% na zbiór testowy
+    # Podział zbioru danych na treningowy 
+    train_size = int(split * len(DS))  
+    test_size = len(DS) - train_size  
     trainDS, testDS = random_split(DS, [train_size, test_size])
+    return trainDS, testDS
+
+# Wczytanie danyc z katalogu all
+'''def load_data_from_all_normalized(split):
+    DS = []
+
+    file_names = os.listdir(config.DATASET_PATH_ALL)
+
+    DS = [f for f in file_names if os.path.isfile(os.path.join(config.DATASET_PATH_ALL, f))]
+
+    # Oblicz statystyki skalowania
+    oct_scaler, cell_scaler = compute_dataset_stats(config.DATASET_PATH_ALL)
+
+    # Zapisz scalery do plików
+    joblib.dump(oct_scaler, os.path.join(config.BASE_OUTPUT, 'oct_scaler.joblib'))
+    joblib.dump(cell_scaler, os.path.join(config.BASE_OUTPUT, 'cell_scaler.joblib'))
+    print(f"[INFO] Zapisano scalery do: {config.BASE_OUTPUT}")
+
+    # Utwórz dataset z przekazanymi skalerami
+    DS = SegmentationDataset(imagePaths=DS, data_Directory=config.DATASET_PATH_ALL,
+                           oct_scaler=oct_scaler, cell_scaler=cell_scaler)
+
+    # Ustawienie ziarna dla powtarzalności
+    torch.manual_seed(13)
+
+    # Podział zbioru danych na treningowy 
+    train_size = int(split * len(DS))  
+    test_size = len(DS) - train_size  
+    trainDS, testDS = random_split(DS, [train_size, test_size])
+    return trainDS, testDS'''
+
+def load_data_from_all_normalized(split, use_existing_scalers=True):
+    """Wczytuje i normalizuje dane, używając istniejących lub nowych scalerów."""
+    # Utwórz folder wyjściowy jeśli nie istnieje
+    os.makedirs(config.BASE_OUTPUT, exist_ok=True)
+    
+    file_names = [f for f in os.listdir(config.DATASET_PATH_ALL) 
+                 if os.path.isfile(os.path.join(config.DATASET_PATH_ALL, f))]
+    
+    oct_scaler_path = os.path.join(config.BASE_OUTPUT, 'oct_scaler.joblib')
+    cell_scaler_path = os.path.join(config.BASE_OUTPUT, 'cell_scaler.joblib')
+    
+    try:
+        if use_existing_scalers and os.path.exists(oct_scaler_path) and os.path.exists(cell_scaler_path):
+            oct_scaler, cell_scaler = load_scalers(oct_scaler_path, cell_scaler_path)
+            print("[INFO] Użyto istniejących scalerów")
+        else:
+            oct_scaler, cell_scaler = compute_dataset_stats(config.DATASET_PATH_ALL)
+            joblib.dump(oct_scaler, oct_scaler_path)
+            joblib.dump(cell_scaler, cell_scaler_path)
+            print(f"[INFO] Obliczono i zapisano nowe scalery w: {config.BASE_OUTPUT}")
+    except Exception as e:
+        print(f"[ERROR] Błąd przetwarzania scalerów: {str(e)}")
+        raise
+    
+    # Utwórz dataset z przekazanymi skalerami
+    DS = SegmentationDataset(
+        imagePaths=file_names,
+        data_Directory=config.DATASET_PATH_ALL,
+        oct_scaler=oct_scaler,
+        cell_scaler=cell_scaler
+    )
+
+    # Podział zbioru danych
+    torch.manual_seed(13)  # Dla powtarzalności
+    train_size = int(split * len(DS))  
+    test_size = len(DS) - train_size  
+    trainDS, testDS = random_split(DS, [train_size, test_size])
+    
+    return trainDS, testDS
+
+def compute_dataset_stats(data_dir):
+    oct_data = []
+    cell_data = []
+
+    # Przejdź przez wszystkie pliki w katalogu
+    for file_name in os.listdir(data_dir):
+        file_path = os.path.join(data_dir, file_name)
+        
+        with h5py.File(file_path, 'r') as f:
+            oct = np.float32(f['OCT'][:])
+            cell = np.float32(f['Cell'][:])
+            
+            oct_data.append(oct.flatten())  # Spłaszczamy, aby obliczyć statystyki globalne
+            cell_data.append(cell.flatten())
+
+    # Oblicz średnią i odchylenie standardowe dla OCT i Cell
+    oct_scaler = StandardScaler()
+    oct_scaler.fit(np.concatenate(oct_data).reshape(-1, 1))  # Musi być kształt (n_samples, 1)
+
+    cell_scaler = StandardScaler()
+    cell_scaler.fit(np.concatenate(cell_data).reshape(-1, 1))
+
+    return oct_scaler, cell_scaler
+
+def load_scalers(oct_scaler_path=None, cell_scaler_path=None):
+    """Wczytuje zapisane scalery z plików."""
+    # Ustaw domyślne ścieżki jeśli nie podano
+    if oct_scaler_path is None:
+        oct_scaler_path = os.path.join(config.SCALET_INPUT, 'oct_scaler.joblib')
+    if cell_scaler_path is None:
+        cell_scaler_path = os.path.join(config.SCALET_INPUT, 'cell_scaler.joblib')
+    
+    # Sprawdź czy pliki istnieją
+    if not os.path.exists(oct_scaler_path):
+        raise FileNotFoundError(f"Nie znaleziono pliku oct_scaler: {oct_scaler_path}")
+    if not os.path.exists(cell_scaler_path):
+        raise FileNotFoundError(f"Nie znaleziono pliku cell_scaler: {cell_scaler_path}")
+    
+    # Wczytaj scalery
+    oct_scaler = joblib.load(oct_scaler_path)
+    cell_scaler = joblib.load(cell_scaler_path)
+    
+    print("[INFO] Wczytano scalery")
+    return oct_scaler, cell_scaler
+
+if __name__ == '__main__':
+    # czy stosować SubsetRandomSampler jesli tak to 1 nie to 0
+    SRS = 0
+
+    # Metryki SSIM i PSNR
+    ssim_metric = StructuralSimilarityIndexMeasure().to(config.DEVICE)
+    psnr_metric = PeakSignalNoiseRatio().to(config.DEVICE)
+    mean_squared_error = MeanSquaredError().to(config.DEVICE)
+
+    # Funkcja, która pozwala na przerwanie pętli z zewnątrz (np. przez Ctrl+C)
+    def handle_interrupt(signal, frame):
+        print("\n[INFO] Trening przerwany przez użytkownika.")
+        raise KeyboardInterrupt  # Podnosi wyjątek, aby przerwać pętlę, ale kontynuować kod za pętlą
+
+    try:
+        trainDS, testDS = load_data_from_all_normalized(0.7, use_existing_scalers=True)
+        print(f"Utworzono zbiór treningowy: {len(trainDS)} próbek")
+        print(f"Utworzono zbiór testowy: {len(testDS)} próbek")
+    except Exception as e:
+        print(f"Nie udało się wczytać danych: {str(e)}")
+        sys.exit(1)  # Zakończ program z kodem błędu
 
     # Ograniczenie liczby danych o połowę
     '''train_indices = list(range(len(trainDS)))[:len(trainDS) // 2]
@@ -73,6 +209,20 @@ if __name__ == '__main__':
 
     trainDS = Subset(trainDS, train_indices)
     testDS = Subset(testDS, test_indices)'''
+
+
+    # Dodanie SubsetRandomSampler (miesza dane i wybiera tylko część do nauki co epokę inne)
+    # Liczba próbek do treningu w każdej epoce
+    if SRS == 1:
+        print("[INFO] SubsetRandomSampler aktywny")
+        sample_size = 1000
+
+        torch.manual_seed(13)
+        # Generowanie losowych indeksów dla podzbioru
+        random_indices = torch.randperm(len(trainDS))[:sample_size]
+
+        # Tworzenie SubsetRandomSampler
+        train_sampler = SubsetRandomSampler(random_indices)
 
     print(f"[INFO] found {len(trainDS)} examples in the training set...")
     print(f"[INFO] found {len(testDS)} examples in the test set...")
@@ -89,10 +239,20 @@ if __name__ == '__main__':
     print("Number of threads: ", nr_workers)
 
     # Utworzenie DataLoaderów
-    trainLoader = DataLoader(trainDS, shuffle=True,
+    # Utworzenie DataLoader z SubsetRandomSampler
+    if SRS == 1:
+        print("[INFO] SubsetRandomSampler aktywny")
+        trainLoader = DataLoader(trainDS, sampler=train_sampler,
                                 batch_size=config.BATCH_SIZE,
                                 pin_memory=config.PIN_MEMORY,
                                 num_workers=nr_workers)
+    else:
+        print("[INFO] Trening bez SubsetRandomSampler")
+        trainLoader = DataLoader(trainDS, shuffle=True,
+                                    batch_size=config.BATCH_SIZE,
+                                    pin_memory=config.PIN_MEMORY,
+                                    num_workers=nr_workers)
+    
     testLoader = DataLoader(testDS, shuffle=False,
                                 batch_size=config.BATCH_SIZE,
                                 pin_memory=config.PIN_MEMORY,
@@ -101,10 +261,10 @@ if __name__ == '__main__':
     model = model.to(config.DEVICE)
         
     # Inicjalizacja funkcji straty i optymalizatora
-    #lossFunc = MSELoss() #BCEWithLogitsLoss()
+    #lossFunc = MSELoss()
     lossFunc = RMSELoss()
 
-    opt = Adam(model.parameters(), lr=config.INIT_LR)
+    opt = Adam(model.parameters(), lr=config.INIT_LR, weight_decay=0.0001)
         
     # Obliczenie liczby kroków na epokę
     trainSteps = len(trainLoader)
@@ -161,7 +321,7 @@ if __name__ == '__main__':
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
-                    
+                
                 totalTrainLoss += loss.item()
                 
             # Walidacja modelu

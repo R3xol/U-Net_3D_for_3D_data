@@ -3,3 +3,5 @@ venv/
 
 # Ignorowanie plików pycache
 __pycache__/
+
+dataset/

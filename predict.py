@@ -30,12 +30,6 @@ def save_to_H5_file(file_name,OCT, cell, predict):
 	
 def make_predictions(model, oct):
 
-	# Skalowanie danych
-	'''oct_scaler = StandardScaler()
-	# Spłaszcz dane, przeskaluj, a następnie przywróć ich oryginalny kształt
-	original_oct_shape = oct.shape
-
-	oct = oct_scaler.fit_transform(oct.flatten().reshape(-1, 1)).reshape(original_oct_shape)'''
 
 	# set model to evaluation mode
 	model.eval()

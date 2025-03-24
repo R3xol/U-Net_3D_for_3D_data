@@ -7,14 +7,15 @@ import torch
 import numpy as np
 
 class SegmentationDataset(Dataset):
-	def __init__(self, imagePaths, data_Directory):
+	def __init__(self, imagePaths, data_Directory, oct_scaler=None, cell_scaler=None):
 		# store the image and mask filepaths, and augmentation
 		# transforms
 		self.imagePaths = imagePaths
 		self.data_Directory = data_Directory
 
-		self.cell_scaler = StandardScaler()
-		self.oct_scaler = StandardScaler()
+		# Używamy przekazanych scalerów lub tworzymy nowe
+		self.oct_scaler = oct_scaler
+		self.cell_scaler = cell_scaler
 		
 	def __len__(self):
 		# return the number of total samples contained in the dataset
@@ -34,6 +35,21 @@ class SegmentationDataset(Dataset):
 
 		cell = np.float32(cell)
 		oct = np.float32(oct)	
+
+		# Przeskaluj dane, jeśli podano skalery
+		if self.oct_scaler is not None:	
+			original_shape = oct.shape
+			oct = self.oct_scaler.transform(oct.reshape(-1, 1)).reshape(original_shape)
+
+		if self.cell_scaler is not None:
+			original_shape = cell.shape
+			cell = self.cell_scaler.transform(cell.reshape(-1, 1)).reshape(original_shape)
+
+		#####
+		# Wizualizacja 
+		print("OCT - mean:", oct.mean(), "std:", oct.std())  # Powinno być ~0 i ~1
+		print("Cell - mean:", cell.mean(), "std:", cell.std())
+		#####
 
 		# Convert to torch tensors
 		cell = torch.from_numpy(cell)

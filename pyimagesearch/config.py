@@ -30,6 +30,8 @@ INPUT_IMAGE_LENGHT = 60
 # define the path to the base output directory
 BASE_OUTPUT = "./output"
 
+SCALET_INPUT = "./scaler_all"
+
 # define the path to the output serialized model, model training
 # plot, and testing image paths
 MODEL_PATH = os.path.sep.join([BASE_OUTPUT, "unet3d.pth"])

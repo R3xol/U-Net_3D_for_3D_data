@@ -7,10 +7,10 @@ class Block3D(Module):
     def __init__(self, inChannels, outChannels, dropout_rate=0.10):
         super().__init__()
         # store the 3D convolution, BatchNorm, and ReLU layers
-        self.conv1 = Conv3d(inChannels, outChannels, kernel_size=3, padding=1)
+        self.conv1 = Conv3d(inChannels, outChannels, kernel_size=3, padding=1) # kernel_size=5, padding=2
         self.bn1 = BatchNorm3d(outChannels)
         self.relu1 = ReLU()  # Tanh()
-        self.conv2 = Conv3d(outChannels, outChannels, kernel_size=3, padding=1)
+        self.conv2 = Conv3d(outChannels, outChannels, kernel_size=3, padding=1)  # kernel_size=5, padding=2
         self.bn2 = BatchNorm3d(outChannels)
         self.relu2 = ReLU()
         self.dropout = Dropout(p=dropout_rate)
@@ -21,7 +21,9 @@ class Block3D(Module):
         x = self.dropout(self.relu2(self.bn2(self.conv2(x))))
         return x
 
-    '''def __init__(self, inChannels, outChannels, dropout_rate=0.10):
+    '''
+    # Model z pojednczą konwolucją 
+    def __init__(self, inChannels, outChannels, dropout_rate=0.10):
         super().__init__()
         self.conv = Conv3d(inChannels, outChannels, kernel_size=3, padding=1)
         self.bn = BatchNorm3d(outChannels)
@@ -34,7 +36,8 @@ class Block3D(Module):
         x = self.bn(x)          # Normalizacja wsadowa
         x = self.relu(x)        # Funkcja aktywacji
         x = self.dropout(x)     # Dropout
-        return x'''
+        return x
+    '''
 
 class Encoder3D(Module):
     def __init__(self, channels=(1, 4, 8, 16)):  # Zmieniono z (1, 16, 32, 64)
@@ -106,7 +109,7 @@ class UNet3D(Module):
         decFeatures = self.decoder(encFeatures[::-1][0], encFeatures[::-1][1:])
         # pass the decoder features through the regression head
         map = self.head(decFeatures)
-        
+
         # resize the output
         if self.retainDim:
             map = F.interpolate(map, size=self.outSize, mode="trilinear", align_corners=False)
