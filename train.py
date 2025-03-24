@@ -109,7 +109,7 @@ def load_data_from_all_normalized(split, use_existing_scalers=True):
     
     try:
         if use_existing_scalers and os.path.exists(oct_scaler_path) and os.path.exists(cell_scaler_path):
-            oct_scaler, cell_scaler = load_scalers(oct_scaler_path, cell_scaler_path)
+            oct_scaler, cell_scaler = load_scalers()
             print("[INFO] Użyto istniejących scalerów")
         else:
             oct_scaler, cell_scaler = compute_dataset_stats(config.DATASET_PATH_ALL)
@@ -179,6 +179,8 @@ def load_scalers(oct_scaler_path=None, cell_scaler_path=None):
     cell_scaler = joblib.load(cell_scaler_path)
     
     print("[INFO] Wczytano scalery")
+    print(cell_scaler_path)
+    print(oct_scaler_path)
     return oct_scaler, cell_scaler
 
 if __name__ == '__main__':

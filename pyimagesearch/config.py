@@ -30,7 +30,7 @@ INPUT_IMAGE_LENGHT = 60
 # define the path to the base output directory
 BASE_OUTPUT = "./output"
 
-SCALET_INPUT = "./scaler_all"
+SCALET_INPUT = "./scalery_all"
 
 # define the path to the output serialized model, model training
 # plot, and testing image paths
