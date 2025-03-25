@@ -47,8 +47,8 @@ class SegmentationDataset(Dataset):
 
 		#####
 		# Wizualizacja 
-		print("OCT - mean:", oct.mean(), "std:", oct.std())  # Powinno być ~0 i ~1
-		print("Cell - mean:", cell.mean(), "std:", cell.std())
+		#print("OCT - mean:", oct.mean(), "std:", oct.std())  # Powinno być ~0 i ~1
+		#print("Cell - mean:", cell.mean(), "std:", cell.std())
 		#####
 
 		# Convert to torch tensors
