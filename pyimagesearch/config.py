@@ -30,7 +30,7 @@ INPUT_IMAGE_LENGHT = 60
 # define the path to the base output directory
 BASE_OUTPUT = "./output"
 
-SCALET_INPUT = "./scalery_all"
+#SCALET_INPUT = "./scalery_all"
 
 # define the path to the output serialized model, model training
 # plot, and testing image paths
@@ -45,7 +45,7 @@ MODEL_IN_PROGRESS_PATH = os.path.sep.join([BASE_OUTPUT, "unet3d_BEST.pth"])
 PREDICT_PATHS = "./output/predict"
 
 BATCH_SIZE = 20  # Rozmiar batcha
-INIT_LR = 5e-4 # 1e-3  # Początkowa wartość learning rate
+INIT_LR = 1e-3 #5e-4 # 1e-3  # Początkowa wartość learning rate
 NUM_EPOCHS = 1000  # Liczba epok
 
 

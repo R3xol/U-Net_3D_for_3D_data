@@ -67,36 +67,8 @@ def load_data_from_all(split):
     trainDS, testDS = random_split(DS, [train_size, test_size])
     return trainDS, testDS
 
-# Wczytanie danyc z katalogu all
-'''def load_data_from_all_normalized(split):
-    DS = []
 
-    file_names = os.listdir(config.DATASET_PATH_ALL)
-
-    DS = [f for f in file_names if os.path.isfile(os.path.join(config.DATASET_PATH_ALL, f))]
-
-    # Oblicz statystyki skalowania
-    oct_scaler, cell_scaler = compute_dataset_stats(config.DATASET_PATH_ALL)
-
-    # Zapisz scalery do plików
-    joblib.dump(oct_scaler, os.path.join(config.BASE_OUTPUT, 'oct_scaler.joblib'))
-    joblib.dump(cell_scaler, os.path.join(config.BASE_OUTPUT, 'cell_scaler.joblib'))
-    print(f"[INFO] Zapisano scalery do: {config.BASE_OUTPUT}")
-
-    # Utwórz dataset z przekazanymi skalerami
-    DS = SegmentationDataset(imagePaths=DS, data_Directory=config.DATASET_PATH_ALL,
-                           oct_scaler=oct_scaler, cell_scaler=cell_scaler)
-
-    # Ustawienie ziarna dla powtarzalności
-    torch.manual_seed(13)
-
-    # Podział zbioru danych na treningowy 
-    train_size = int(split * len(DS))  
-    test_size = len(DS) - train_size  
-    trainDS, testDS = random_split(DS, [train_size, test_size])
-    return trainDS, testDS'''
-
-def load_data_from_all_normalized(split, use_existing_scalers=True):
+'''def load_data_from_all_normalized(split, use_existing_scalers=True):
     """Wczytuje i normalizuje dane, używając istniejących lub nowych scalerów."""
     # Utwórz folder wyjściowy jeśli nie istnieje
     os.makedirs(config.BASE_OUTPUT, exist_ok=True)
@@ -181,7 +153,7 @@ def load_scalers(oct_scaler_path=None, cell_scaler_path=None):
     print("[INFO] Wczytano scalery")
     print(cell_scaler_path)
     print(oct_scaler_path)
-    return oct_scaler, cell_scaler
+    return oct_scaler, cell_scaler'''
 
 if __name__ == '__main__':
     # czy stosować SubsetRandomSampler jesli tak to 1 nie to 0
@@ -198,7 +170,8 @@ if __name__ == '__main__':
         raise KeyboardInterrupt  # Podnosi wyjątek, aby przerwać pętlę, ale kontynuować kod za pętlą
 
     try:
-        trainDS, testDS = load_data_from_all_normalized(0.7, use_existing_scalers=True)
+        trainDS, testDS = load_data_from_all(0.7)
+        # trainDS, testDS = load_data_from_all_normalized(0.7, use_existing_scalers=True)
         print(f"Utworzono zbiór treningowy: {len(trainDS)} próbek")
         print(f"Utworzono zbiór testowy: {len(testDS)} próbek")
     except Exception as e:
