@@ -45,9 +45,9 @@ class SegmentationDataset(Dataset):
 		cell_scaled = (cell - mean_X) / std_X
 
 		#####
-		print("\n")
-		print("OCT  - mean: {:15.11f}	std: {:15.11f}".format(oct_scaled.mean().item(), oct_scaled.std().item()))
-		print("Cell - mean: {:15.11f}	std: {:15.11f}".format(cell_scaled.mean().item(), cell_scaled.std().item()))
+		#print("\n")
+		#print("OCT  - mean: {:15.11f}	std: {:15.11f}".format(oct_scaled.mean().item(), oct_scaled.std().item()))
+		#print("Cell - mean: {:15.11f}	std: {:15.11f}".format(cell_scaled.mean().item(), cell_scaled.std().item()))
 		#####
 
 		# Convert to torch tensors
