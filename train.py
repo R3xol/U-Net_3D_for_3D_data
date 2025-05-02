@@ -302,7 +302,7 @@ if __name__ == '__main__':
             # Walidacja modelu
             model.eval()
             with torch.no_grad():
-                for (x, y) in testLoader:
+                for (x, y) in tqdm(testLoader):
                     (x, y) = (x.to(config.DEVICE), y.to(config.DEVICE))
                     pred = model(x)
                     loss = lossFunc(pred, y)
